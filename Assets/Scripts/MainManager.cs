@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEditor;
 
 public class MainManager : MonoBehaviour
 {
@@ -18,10 +19,24 @@ public class MainManager : MonoBehaviour
     
     private bool m_GameOver = false;
 
+    [SerializeField] DataPersistanceManager dataPersistanceManager;
+    private bool isPersistanceManagerExist;
+    [SerializeField] Text highscoreText;
     
     // Start is called before the first frame update
     void Start()
     {
+        m_Points = 0;
+
+        isPersistanceManagerExist = (GameObject.Find("Data Persistance Manager") != null);
+        if (isPersistanceManagerExist)
+        {
+            dataPersistanceManager = GameObject.Find("Data Persistance Manager").GetComponent<DataPersistanceManager>();
+            ScoreText.text = $"{dataPersistanceManager.PlayerName} score : {m_Points}";
+            highscoreText.text = $"Best score: {dataPersistanceManager.HighscoreName}: {dataPersistanceManager.Highscore}";
+        }
+            
+
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
         
@@ -64,13 +79,50 @@ public class MainManager : MonoBehaviour
 
     void AddPoint(int point)
     {
-        m_Points += point;
-        ScoreText.text = $"Score : {m_Points}";
+        if (isPersistanceManagerExist)
+        {
+            m_Points += point;
+            ScoreText.text = $"{dataPersistanceManager.PlayerName} score : {m_Points}";
+        } else {
+            m_Points += point;
+            ScoreText.text = $"Score : {m_Points}";
+        }
     }
 
     public void GameOver()
     {
         m_GameOver = true;
+        SaveHighScore();
         GameOverText.SetActive(true);
+    }
+
+    private void SaveHighScore()
+    {
+        if (!isPersistanceManagerExist) return; // For testing purpouses, because Data Persistance can be unable.
+        if (m_Points > dataPersistanceManager.Highscore)
+        {
+            dataPersistanceManager.Highscore = m_Points;
+            dataPersistanceManager.HighscoreName = dataPersistanceManager.PlayerName;
+            dataPersistanceManager.SaveHighScore();
+
+            highscoreText.text = $"Best score: {dataPersistanceManager.HighscoreName}: {dataPersistanceManager.Highscore}";
+        }
+    }
+
+    public void QuitGame()
+    {
+#if UNITY_EDITOR
+        EditorApplication.ExitPlaymode();
+#endif
+        Application.Quit();
+    }
+
+    public void RestartGameButton()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+    public void MainMenuGameButton()
+    {
+        SceneManager.LoadScene(0);
     }
 }
